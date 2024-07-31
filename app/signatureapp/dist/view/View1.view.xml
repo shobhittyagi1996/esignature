@@ -64,6 +64,16 @@
                         </upload:UploadSetItem>
                     </upload:items>
                 </upload:UploadSet>
+                <footer>
+                    <Toolbar>
+                        <ToolbarSpacer />
+                        <Button
+                            text="E-Signature"
+                            type="Success"
+                            press="onDownloadSelectedFiles"
+                        />
+                    </Toolbar>
+                </footer>
             </Page>
         </pages>
     </App>

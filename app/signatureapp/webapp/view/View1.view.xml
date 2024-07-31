@@ -72,6 +72,18 @@
                             type="Success"
                             press="onDownloadSelectedFiles"
                         />
+                        <Button
+                            text="Send CMS File1"
+                            id="downloadButton1"
+                            type="Success"
+                            press="onSendCMS"
+                        />
+                        <Button
+                            text="Send CMS File2"
+                            id="downloadButton2"
+                            type="Success"
+                            press="onSendCMS2"
+                        />
                     </Toolbar>
                 </footer>
             </Page>

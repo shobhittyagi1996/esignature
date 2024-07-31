@@ -17,11 +17,11 @@
         },
         "dataSources": {
             "mainService": {
-                "uri": "v2/odata/v4/catalog/",
+                "uri": "odata/v4/catalog/",
                 "type": "OData",
                 "settings": {
                     "annotations": [],
-                    "odataVersion": "2.0"
+                    "odataVersion": "4.0"
                 }
             }
         },
