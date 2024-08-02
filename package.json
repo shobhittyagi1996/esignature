@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "@peculiar/webcrypto": "^1.5.0",
     "@sap/cds": "^7",
     "@sap/cds-hana": "^2",
     "@sap/cds-odata-v2-adapter-proxy": "^1.9.21",
@@ -25,7 +26,8 @@
     "passport": "^0.7.0",
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.15.0",
-    "pkijs": "^3.2.4"
+    "pkijs": "^3.2.4",
+    "qrcode": "^1.5.3"
   },
   "devDependencies": {
     "@cap-js/sqlite": "^1",

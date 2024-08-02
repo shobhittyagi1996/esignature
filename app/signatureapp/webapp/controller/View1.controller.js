@@ -365,6 +365,7 @@ sap.ui.define([
                     // Convert Uint8Array to base64
                     debugger
                     const base64String = this.arrayBufferToBase64(bytes);
+                    console.log(base64String)
 					
 					// Decode base64 string to binary string
                     const binaryString = atob(base64String);
@@ -376,6 +377,7 @@ sap.ui.define([
                     }
 
                        const pdfBlob = new Blob([binaryBytes], { type: 'application/pdf' });
+                       console.log(pdfBlob);
                        
 
                     // Create a link element
