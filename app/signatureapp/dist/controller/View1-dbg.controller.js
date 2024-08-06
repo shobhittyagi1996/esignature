@@ -8,7 +8,7 @@ sap.ui.define([
     /**
      * @param {typeof sap.ui.core.mvc.Controller} Controller
      */
-    function (Controller, JSONModel, Item, MessageToast,WebSocket) {
+    function (Controller, JSONModel, Item, MessageToast, WebSocket) {
         "use strict";
 
         return Controller.extend("com.kpo.signatureapp.controller.View1", {
@@ -18,8 +18,9 @@ sap.ui.define([
                     oDownloadButton.attachPress(this.onDownloadSelectedFiles.bind(this));
                 }
 
+
                 // Set base URL
-                this._setBaseUrl();
+               this._setBaseUrl();
             },
 
             _setBaseUrl: function () {
@@ -78,7 +79,7 @@ sap.ui.define([
 
             _download: function (item) {
                 var settings = {
-                    url: this._baseUrl + item.getUrl(),
+                    url: item.getUrl(),
                     method: "GET",
                     headers: {
                         "Content-type": "application/octet-stream"
@@ -107,7 +108,7 @@ sap.ui.define([
                 };
 
                 var settings = {
-                    url: this._baseUrl + "/odata/v4/catalog/Files",
+                    url: this._baseUrl +"/odata/v4/catalog/Files",
                     method: "POST",
                     headers: {
                         "Content-type": "application/json"
@@ -127,7 +128,7 @@ sap.ui.define([
             },
 
             _uploadContent: function (item, id) {
-                var url = `${this._baseUrl}/odata/v4/catalog/Files(${id})/content`;
+                var url = this._baseUrl +`/odata/v4/catalog/Files(${id})/content`;
                 item.setUploadUrl(url);
                 var oUploadSet = this.byId("uploadSet");
                 oUploadSet.setHttpRequestMethod("PUT");
@@ -139,7 +140,7 @@ sap.ui.define([
                 var aSelectedItems = oUploadSet.getSelectedItems();
 
                 if (aSelectedItems.length === 0) {
-                    MessageToast.show("No items selected for download");
+                    MessageToast.show("No items selected for E-Signature");
                     return;
                 }
 
@@ -155,7 +156,7 @@ sap.ui.define([
                                 var base64data = reader.result;
                                 let file = base64data.split(',')[1]; // Remove the "data:application/octet-stream;base64," part
                                 debugger
-                                that.request(file,that)
+                                that.request(file, that)
                                 console.log(file); // Now `File` contains the Base64 string
                                 MessageToast.show("File downloaded and converted to Base64");
                             };
@@ -201,22 +202,23 @@ sap.ui.define([
             connect: function () {
                 var SOCKET_URL = 'wss://127.0.0.1:13579/';
                 var callback = null;
-               
+
                 return new Promise(function (resolve, reject) {
                     let webSocket = new WebSocket(SOCKET_URL);
 
-                    webSocket.onopen = function () {
-                        console.log("socket connection is opened [state = " + webSocket.readyState + "]: " + webSocket.url);
+                    webSocket.attachOpen(function (oEvent) {
+                        debugger;
+                        console.log("socket connection is opened  ");
                         resolve(webSocket);
-                    };
+                    });
 
-                    webSocket.onerror = function (err) {
+                    webSocket.attachError(function (err) {
                         // unblockScreen();
                         console.error("socket connection error : ", err);
                         reject(err);
-                    };
+                    });
 
-                    webSocket.onclose = function (event) {
+                    webSocket.attachClose(function (event) {
                         debugger
                         if (event.wasClean) {
                             console.error("socket connection is closed ");
@@ -225,13 +227,13 @@ sap.ui.define([
                             openDialog();
                         }
                         console.log('Code: ' + event.code + ' Reason: ' + event.reason);
-                    };
+                    })
                 });
             },
 
-            request: async function (file,controller) {
+            request: async function (file, controller) {
                 // blockScreen();
-                this.getView().setBusy(true)
+
 
 
 
@@ -276,7 +278,7 @@ sap.ui.define([
                             "AKKZIDCardStore"],//selectedStorages,
                         "format": "cms",
                         "data": dataToSign,
-                        "signingParams": { decode},
+                        "signingParams": { decode },
                         "signerParams": {
                             "extKeyUsageOids": [extKeyUsageOidString],//extKeyUsageOids,
                             /*"iin": iin,
@@ -288,7 +290,9 @@ sap.ui.define([
                     }
                 }
 
-               
+
+
+
 
                 return controller.connect().then((webSocket) => {
 
@@ -296,8 +300,8 @@ sap.ui.define([
                     webSocket.send(JSON.stringify(signInfo))
 
                     return new Promise((resolve, reject) => {
-                        webSocket.onmessage = ({ data }) => {
-                            response = JSON.parse(data);
+                        webSocket.attachMessage(function (oEvent) {
+                            let response = JSON.parse(oEvent.mParameters.data);
                             debugger
                             if (response != null) {
                                 var responseStatus = response['status'];
@@ -307,6 +311,8 @@ sap.ui.define([
                                         // unblockScreen();
                                         if (responseBody.hasOwnProperty('result')) {
                                             var result = responseBody.result;
+                                            controller.cmsString = result;
+                                            MessageToast.show("The file is signed successfully")
                                             $("#signature").val(result);
                                         }
                                     }
@@ -317,15 +323,179 @@ sap.ui.define([
                                 }
                             }
                             resolve(response);
-                        }
+                        })
                     })
                 })
                     .catch(function (err) {
                         // unblockScreen();
                         console.log(err)
                     });
-            }
+            },
+            // onSendCMS: function() {
+            //     let oModel = this.getOwnerComponent().getModel();
+            //     var oActionDataContext = oModel.bindContext("/doConvertCMSTOPDF(...)");
+            //     oActionDataContext.setParameter(`cms`, this.cmsString);
+            //     oActionDataContext.execute().then(function(oResponse) {
+            //         const blob = new Blob([oResponse], { type: 'application/pdf' });
+            //         const link = document.createElement('a');
+            //         link.href = URL.createObjectURL(blob);
+            //         link.download = 'signed_output.pdf';
+            //         link.click();
+            //         URL.revokeObjectURL(link.href);
+            //         alert('Signed PDF downloaded successfully');
+            //     }.bind(this)).catch(function(err) {
+            //         console.log(err);
+            //         alert('Error in merging CMS to PDF: ' + err.message);
+            //     });
+            // },
+    
+           
+            onSendCMS:function(){
+                debugger
+         
+                let cmsData = this.cmsString
+                if(cmsData==null){
+                    MessageToast.show("Please select the file and sign it first before Validation")
+                    return
+                }
+                cmsData = cmsData.replace(/-----BEGIN CMS-----|-----END CMS-----|\s/g, '');
 
+
+
+                  const binaryString = atob(cmsData);
+				 const bytes = new Uint8Array(binaryString.length);
+				 
+				   for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i); 
+                }
+                // Convert ArrayBuffer to Uint8Array
+                //const bytes = new Uint8Array(cmsData);
+
+                try {
+                    // Convert Uint8Array to base64
+                    debugger
+                    const base64String = this.arrayBufferToBase64(bytes);
+                    console.log(base64String)
+					
+					// Decode base64 string to binary string
+                    const binaryString = atob(base64String);
+
+                    // Convert binary string to Uint8Array
+                    const binaryBytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        binaryBytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                       const pdfBlob = new Blob([binaryBytes], { type: 'application/pdf' });
+                       console.log(pdfBlob);
+                       
+
+                    // Create a link element
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(pdfBlob);
+                    link.download = 'document.pdf';
+
+                    // Append the link to the body and trigger a click
+                    document.body.appendChild(link);
+                    link.click();
+
+                    // Remove the link from the body
+                    document.body.removeChild(link);
+                } catch (error) {
+                    console.error('Error processing CMS data:', error);
+                    alert('Failed to process CMS data.');
+                }
+            
+
+            // Read the file as ArrayBuffer
+          //  reader.readAsArrayBuffer(file);
+        },
+
+        // Utility function to convert ArrayBuffer to base64
+        arrayBufferToBase64:  function (buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        },
+
+        onSendCMS2: async function() {
+            let cmsData = this.cmsString
+            if(cmsData==null){
+                MessageToast.show("Please select the file and sign it first before Validation")
+                return
+            }
+            cmsData = cmsData.replace(/-----BEGIN CMS-----|-----END CMS-----|\s/g, '');
+
+            try {
+                // Convert CMS data to binary
+                const binaryString = atob(cmsData);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+        
+                // Convert binary data to base64
+                const base64String = this.arrayBufferToBase64(bytes);
+        
+                // Get the OData model
+                const oModel = this.getOwnerComponent().getModel();
+                const oActionDataContext = oModel.bindContext("/mergePDF(...)");
+                oActionDataContext.setParameter("cmsData", base64String);
+                
+                oActionDataContext.execute().then(function(oResponse) {
+                    debugger
+                    var  oActionContext = oActionDataContext.getBoundContext()
+                    var oObject=oActionContext.getObject().value
+                    // Decode the base64 PDF data
+                    const pdfBytes = atob(oObject);
+                    const pdfArray = new Uint8Array(pdfBytes.length);
+                    for (let i = 0; i < pdfBytes.length; i++) {
+                        pdfArray[i] = pdfBytes.charCodeAt(i);
+                    }
+                    
+
+                    
+        
+                    // Create a blob from the response
+                    const pdfBlob = new Blob([pdfArray], { type: 'application/pdf' });
+                    
+        
+                    // Create a link element
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(pdfBlob);
+                    link.download = 'Signed.pdf';
+        
+                    // Append the link to the body and trigger a click
+                    document.body.appendChild(link);
+                    link.click();
+        
+                    // Remove the link from the body
+                    document.body.removeChild(link);
+                }).catch(function(error) {
+                    console.error('Error executing action:', error);
+                    alert('Failed to merge PDF.');
+                });
+            } catch (error) {
+                console.error('Error processing CMS data:', error);
+                alert('Failed to process CMS data.');
+            }
+        },
+        
+        // Utility function to convert ArrayBuffer to base64
+        arrayBufferToBase64: function (buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+        
 
         });
     });

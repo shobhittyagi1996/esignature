@@ -73,13 +73,13 @@
                             press="onDownloadSelectedFiles"
                         />
                         <Button
-                            text="Send CMS File1"
+                            text="PDF Validation for Ezsigner"
                             id="downloadButton1"
                             type="Success"
                             press="onSendCMS"
                         />
                         <Button
-                            text="Send CMS File2"
+                            text="PDF Validation Merged with Sign and QR Code"
                             id="downloadButton2"
                             type="Success"
                             press="onSendCMS2"

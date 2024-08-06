@@ -1,9 +1,12 @@
 const cds = require('@sap/cds');
-const { PDFDocument, rgb } = require('pdf-lib');
+const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const fontkit = require('fontkit'); // Import fontkit
 const { Crypto } = require('@peculiar/webcrypto');
 const asn1js = require('asn1js');
 const pkijs = require('pkijs');
 const QRCode = require('qrcode');
+const fs = require('fs');
+const path = require('path');
 
 // Set up the Web Crypto API polyfill
 const crypto = new Crypto();
@@ -24,11 +27,17 @@ module.exports = cds.service.impl(async function () {
         // Load initial PDF
         const pdfDoc = await PDFDocument.load(cmsBytes);
 
-        // Extract signer info
-        // let content ='ҰЛТТЫҚ КУӘЛАНДЫРУШЫ ОРТАЛЫҚ (GOST) TEST 2022, 2.5.4.6: KZ'
+        // Register fontkit to enable custom fonts
+        pdfDoc.registerFontkit(fontkit);
 
+        // Extract signer info
         let content = extractSignerInfo(cmsData);
         console.log("Received content", content);
+
+        // Embed the uploaded Courier.ttf font (supports Russian characters)
+        const fontPath = path.join(__dirname, 'Courier.ttf');
+        const fontBytes = fs.readFileSync(fontPath);
+        const customFont = await pdfDoc.embedFont(fontBytes);
 
         // Generate QR code
         const qrCodeData = await QRCode.toBuffer(content); // Generate QR code as PNG buffer
@@ -37,20 +46,21 @@ module.exports = cds.service.impl(async function () {
         const page = pdfDoc.addPage([600, 300]);
 
         // Add content to page
-        page.drawText(content.split("\n")[0], {
-            x: 20,
+        page.drawText(content, {
+            x: 10,
             y: 250,
-            size: 10,
+            size: 8,
+            font: customFont,
             color: rgb(0, 0, 0),
         });
 
         // Add QR code to page
         const qrImage = await pdfDoc.embedPng(qrCodeData);
-        const qrDimensions = qrImage.scale(0.5); // Scale QR code to fit
+        const qrDimensions = qrImage.scale(0.3); // Scale QR code to fit
 
         page.drawImage(qrImage, {
-            x: 400,
-            y: 100,
+            x: 430,
+            y: 90,
             width: qrDimensions.width,
             height: qrDimensions.height,
         });
@@ -163,9 +173,7 @@ function extractSignerInfo(cmsData) {
 
             if (signerCertificate) {
                 const signerCertificateSubject = signerCertificate.subject.typesAndValues.map(attr => `${attr.type}: ${attr.value.valueBlock.value}`).join(', ');
-                // content += `Serial Number: ${serialNumberOfSign}\n`;
-                content += `Serial Number: ${serialNumberOfSign}\n Issuer Sign: ${issuerSign}\n Signer Certificate: ${signerCertificateSubject} `;
-
+                content += `Serial Number: ${serialNumberOfSign}\n Issuer Sign: ${issuerSign}\n Signer Certificate: ${signerCertificateSubject}`;
             }
         }
     } else {
