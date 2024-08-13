@@ -3,12 +3,13 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "sap/ui/core/Item",
     "sap/m/MessageToast",
-    "sap/ui/core/ws/WebSocket"
+    "sap/ui/core/ws/WebSocket",
+    "sap/ui/core/Fragment",
 ],
     /**
      * @param {typeof sap.ui.core.mvc.Controller} Controller
      */
-    function (Controller, JSONModel, Item, MessageToast, WebSocket) {
+    function (Controller, JSONModel, Item, MessageToast, WebSocket, Fragment) {
         "use strict";
 
         return Controller.extend("com.kpo.signatureapp.controller.View1", {
@@ -20,7 +21,7 @@ sap.ui.define([
 
 
                 // Set base URL
-               this._setBaseUrl();
+                this._setBaseUrl();
             },
 
             _setBaseUrl: function () {
@@ -105,11 +106,11 @@ sap.ui.define([
                     mediaType: item.getMediaType(),
                     fileName: item.getFileName(),
                     size: item.getFileObject().size,
-                    signFileMetadata:item
+                   
                 };
 
                 var settings = {
-                    url: this._baseUrl +"/odata/v4/catalog/Files",
+                    url: this._baseUrl + "/odata/v4/catalog/Files",
                     method: "POST",
                     headers: {
                         "Content-type": "application/json"
@@ -127,15 +128,15 @@ sap.ui.define([
                         });
                 });
             },
-            getSignData: function() {
-                debugger
+            getSignData: function () {
+                debugger;
                 let cmsData = this.cmsString;
                 if (cmsData == null) {
                     MessageToast.show("Please select the file and sign it first before Validation");
                     return;
                 }
                 cmsData = cmsData.replace(/-----BEGIN CMS-----|-----END CMS-----|\s/g, '');
-            
+
                 try {
                     // Convert CMS data to binary
                     const binaryString = atob(cmsData);
@@ -143,34 +144,35 @@ sap.ui.define([
                     for (let i = 0; i < binaryString.length; i++) {
                         bytes[i] = binaryString.charCodeAt(i);
                     }
-            
+
                     // Convert binary data to base64
                     const base64String = this.arrayBufferToBase64(bytes);
-            
+
                     // Get the OData model
                     const oModel = this.getOwnerComponent().getModel();
                     const oActionDataContext = oModel.bindContext("/getSignData(...)");
                     oActionDataContext.setParameter("sign", base64String);
-            
-                    oActionDataContext.execute().then(function(oResponse) {
+
+                    oActionDataContext.execute().then(function (oResponse) {
                         debugger;
                         var oActionContext = oActionDataContext.getBoundContext();
                         var oObject = oActionContext.getObject().value;
-            
-                        
-                        // Additional logic to handle the PDF data can be placed here
-            
-                    }).catch(function(err) {
+
+                        // Call function to update the signFileMetadata field
+                        this.updateFileMetadata(oObject);
+
+                    }.bind(this)).catch(function (err) {
                         console.error("Error executing OData action:", err);
                     });
-                    
+
                 } catch (err) {
                     console.error("Error processing CMS data:", err);
                 }
             },
-            
+
+
             // Placeholder for arrayBufferToBase64 function
-            arrayBufferToBase64: function(buffer) {
+            arrayBufferToBase64: function (buffer) {
                 var binary = '';
                 var bytes = new Uint8Array(buffer);
                 var len = bytes.byteLength;
@@ -179,10 +181,134 @@ sap.ui.define([
                 }
                 return window.btoa(binary);
             },
+
+            updateFileMetadata: function (oObject) {
+                // Replace with the actual file ID you want to update
+                const fileId = "540823f3-e2b1-4c3a-8452-b3bf20d88717";
+                const url = `${this._baseUrl}/odata/v4/catalog/Files(${fileId})`;
+
+                // Data to update
+                const updatedData = {
+                    signFileMetadata: oObject
+                };
+
+                // AJAX call to update the file metadata
+                $.ajax({
+                    url: url,
+                    type: "PATCH",
+                    contentType: "application/json",
+                    data: JSON.stringify(updatedData),
+                    success: function (result) {
+                        MessageToast.show("File signed and signature updated successfully");
+                    },
+                    error: function (err) {
+                        console.error("Error updating file metadata:", err);
+                        MessageToast.show("Error updating file metadata");
+                    }
+                });
+            },
+
+            onVerifyButtonPress: function () {
+                debugger;
+                let cmsData = this.cmsString;
+                if (cmsData == null) {
+                    MessageToast.show("Please select the file and sign it first before Validation");
+                    return;
+                }
+                cmsData = cmsData.replace(/-----BEGIN CMS-----|-----END CMS-----|\s/g, '');
+
+                try {
+                    // Convert CMS data to binary
+                    const binaryString = atob(cmsData);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                    // Convert binary data to base64
+                    const base64String = this.arrayBufferToBase64(bytes);
+
+                    // Get the OData model
+                    const oModel = this.getOwnerComponent().getModel();
+                    const oActionDataContext = oModel.bindContext("/getSignData(...)");
+                    oActionDataContext.setParameter("sign", base64String);
+
+                    oActionDataContext.execute().then(function (oResponse) {
+                        debugger;
+                        var oActionContext = oActionDataContext.getBoundContext();
+                        var oObject = oActionContext.getObject().value;
+
+                        // Call function to update the signFileMetadata field
+                        this.onVerify(oObject);
+
+                    }.bind(this)).catch(function (err) {
+                        console.error("Error executing OData action:", err);
+                    });
+
+                } catch (err) {
+                    console.error("Error processing CMS data:", err);
+                }
+            },
+
+            onVerify: function (signData) {
+                if (!this.VerifySign) {
+                    Fragment.load({
+                        id: this.getView().getId(),
+                        name: "com.kpo.signatureapp.view.fragment.VerifySign",
+                        controller: this
+                    }).then(oDialog => {
+                        this.VerifySign = oDialog
+                        this.getView().addDependent(oDialog)
+                        
+                        // Set the text area value
+                        var oTextArea = this.byId("idVerifySignTextArea");
+                        oTextArea.setValue(signData);
             
+                        // Generate the QR code and set the image src
+                        var qrCodeImage = this.byId("idQRCodeImage");
+                        var qrCodeURL = this.generateQRCode(signData);
+                        qrCodeImage.setSrc(qrCodeURL);
+            
+                        // Set the width and height of the QR code image
+                        qrCodeImage.setWidth("200px");  
+                        qrCodeImage.setHeight("200px"); 
+            
+                        oDialog.open();
+                    });
+                } else {
+                    // If dialog already exists, just set the value and open it
+                    var oTextArea = this.byId("idVerifySignTextArea");
+                    oTextArea.setValue(signData);
+            
+                    // Generate the QR code and set the image src
+                    var qrCodeImage = this.byId("idQRCodeImage");
+                    var qrCodeURL = this.generateQRCode(signData);
+                    qrCodeImage.setSrc(qrCodeURL);
+            
+                    // Set the width and height of the QR code image
+                    qrCodeImage.setWidth("200px");  // Ensure this is a valid CSS size value
+                    qrCodeImage.setHeight("200px"); // Ensure this is a valid CSS size value
+            
+                    this.VerifySign.open();
+                }
+            },
+            
+            generateQRCode: function (signData) {
+                // Create a QR code using a library or method of choice
+                const qr = qrcode(0, 'L');
+                qr.addData(signData);
+                qr.make();
+                return qr.createDataURL();
+            },
+            
+            onCancel: function () {
+                this.VerifySign.close();
+            },
+
+
 
             _uploadContent: function (item, id) {
-                var url = this._baseUrl +`/odata/v4/catalog/Files(${id})/content`;
+                var url = this._baseUrl + `/odata/v4/catalog/Files(${id})/content`;
                 item.setUploadUrl(url);
                 var oUploadSet = this.byId("uploadSet");
                 oUploadSet.setHttpRequestMethod("PUT");
@@ -366,8 +492,11 @@ sap.ui.define([
                                         if (responseBody.hasOwnProperty('result')) {
                                             var result = responseBody.result;
                                             controller.cmsString = result;
-                                            MessageToast.show("The file is signed successfully")
+
+                                            // MessageToast.show("The file is signed successfully")
                                             $("#signature").val(result);
+                                            controller.getSignData();
+
                                         }
                                     }
                                 } else if (responseStatus === false) {
@@ -402,13 +531,13 @@ sap.ui.define([
             //         alert('Error in merging CMS to PDF: ' + err.message);
             //     });
             // },
-    
-           
-            onSendCMS:function(){
+
+
+            onSendCMS: function () {
                 debugger
-         
+
                 let cmsData = this.cmsString
-                if(cmsData==null){
+                if (cmsData == null) {
                     MessageToast.show("Please select the file and sign it first before Validation")
                     return
                 }
@@ -416,11 +545,11 @@ sap.ui.define([
 
 
 
-                  const binaryString = atob(cmsData);
-				 const bytes = new Uint8Array(binaryString.length);
-				 
-				   for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i); 
+                const binaryString = atob(cmsData);
+                const bytes = new Uint8Array(binaryString.length);
+
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
                 }
                 // Convert ArrayBuffer to Uint8Array
                 //const bytes = new Uint8Array(cmsData);
@@ -430,8 +559,8 @@ sap.ui.define([
                     debugger
                     const base64String = this.arrayBufferToBase64(bytes);
                     console.log(base64String)
-					
-					// Decode base64 string to binary string
+
+                    // Decode base64 string to binary string
                     const binaryString = atob(base64String);
 
                     // Convert binary string to Uint8Array
@@ -440,9 +569,9 @@ sap.ui.define([
                         binaryBytes[i] = binaryString.charCodeAt(i);
                     }
 
-                       const pdfBlob = new Blob([binaryBytes], { type: 'application/pdf' });
-                       console.log(pdfBlob);
-                       
+                    const pdfBlob = new Blob([binaryBytes], { type: 'application/pdf' });
+                    console.log(pdfBlob);
+
 
                     // Create a link element
                     const link = document.createElement('a');
@@ -459,97 +588,97 @@ sap.ui.define([
                     console.error('Error processing CMS data:', error);
                     alert('Failed to process CMS data.');
                 }
-            
 
-            // Read the file as ArrayBuffer
-          //  reader.readAsArrayBuffer(file);
-        },
 
-        // Utility function to convert ArrayBuffer to base64
-        arrayBufferToBase64:  function (buffer) {
-            let binary = '';
-            const bytes = new Uint8Array(buffer);
-            const len = bytes.byteLength;
-            for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return window.btoa(binary);
-        },
+                // Read the file as ArrayBuffer
+                //  reader.readAsArrayBuffer(file);
+            },
 
-        onSendCMS2: async function() {
-            let cmsData = this.cmsString
-            if(cmsData==null){
-                MessageToast.show("Please select the file and sign it first before Validation")
-                return
-            }
-            cmsData = cmsData.replace(/-----BEGIN CMS-----|-----END CMS-----|\s/g, '');
-
-            try {
-                // Convert CMS data to binary
-                const binaryString = atob(cmsData);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
+            // Utility function to convert ArrayBuffer to base64
+            arrayBufferToBase64: function (buffer) {
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                const len = bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
                 }
-        
-                // Convert binary data to base64
-                const base64String = this.arrayBufferToBase64(bytes);
-        
-                // Get the OData model
-                const oModel = this.getOwnerComponent().getModel();
-                const oActionDataContext = oModel.bindContext("/mergePDF(...)");
-                oActionDataContext.setParameter("cmsData", base64String);
-                
-                oActionDataContext.execute().then(function(oResponse) {
-                    debugger
-                    var  oActionContext = oActionDataContext.getBoundContext()
-                    var oObject=oActionContext.getObject().value
-                    // Decode the base64 PDF data
-                    const pdfBytes = atob(oObject);
-                    const pdfArray = new Uint8Array(pdfBytes.length);
-                    for (let i = 0; i < pdfBytes.length; i++) {
-                        pdfArray[i] = pdfBytes.charCodeAt(i);
-                    }
-                    
+                return window.btoa(binary);
+            },
 
-                    
-        
-                    // Create a blob from the response
-                    const pdfBlob = new Blob([pdfArray], { type: 'application/pdf' });
-                    
-        
-                    // Create a link element
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(pdfBlob);
-                    link.download = 'Signed.pdf';
-        
-                    // Append the link to the body and trigger a click
-                    document.body.appendChild(link);
-                    link.click();
-        
-                    // Remove the link from the body
-                    document.body.removeChild(link);
-                }).catch(function(error) {
-                    console.error('Error executing action:', error);
-                    alert('Failed to merge PDF.');
-                });
-            } catch (error) {
-                console.error('Error processing CMS data:', error);
-                alert('Failed to process CMS data.');
+            onSendCMS2: async function () {
+                let cmsData = this.cmsString
+                if (cmsData == null) {
+                    MessageToast.show("Please select the file and sign it first before Validation")
+                    return
+                }
+                cmsData = cmsData.replace(/-----BEGIN CMS-----|-----END CMS-----|\s/g, '');
+
+                try {
+                    // Convert CMS data to binary
+                    const binaryString = atob(cmsData);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                    // Convert binary data to base64
+                    const base64String = this.arrayBufferToBase64(bytes);
+
+                    // Get the OData model
+                    const oModel = this.getOwnerComponent().getModel();
+                    const oActionDataContext = oModel.bindContext("/mergePDF(...)");
+                    oActionDataContext.setParameter("cmsData", base64String);
+
+                    oActionDataContext.execute().then(function (oResponse) {
+                        debugger
+                        var oActionContext = oActionDataContext.getBoundContext()
+                        var oObject = oActionContext.getObject().value
+                        // Decode the base64 PDF data
+                        const pdfBytes = atob(oObject);
+                        const pdfArray = new Uint8Array(pdfBytes.length);
+                        for (let i = 0; i < pdfBytes.length; i++) {
+                            pdfArray[i] = pdfBytes.charCodeAt(i);
+                        }
+
+
+
+
+                        // Create a blob from the response
+                        const pdfBlob = new Blob([pdfArray], { type: 'application/pdf' });
+
+
+                        // Create a link element
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(pdfBlob);
+                        link.download = 'Signed.pdf';
+
+                        // Append the link to the body and trigger a click
+                        document.body.appendChild(link);
+                        link.click();
+
+                        // Remove the link from the body
+                        document.body.removeChild(link);
+                    }).catch(function (error) {
+                        console.error('Error executing action:', error);
+                        alert('Failed to merge PDF.');
+                    });
+                } catch (error) {
+                    console.error('Error processing CMS data:', error);
+                    alert('Failed to process CMS data.');
+                }
+            },
+
+            // Utility function to convert ArrayBuffer to base64
+            arrayBufferToBase64: function (buffer) {
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                const len = bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return window.btoa(binary);
             }
-        },
-        
-        // Utility function to convert ArrayBuffer to base64
-        arrayBufferToBase64: function (buffer) {
-            let binary = '';
-            const bytes = new Uint8Array(buffer);
-            const len = bytes.byteLength;
-            for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return window.btoa(binary);
-        }
-        
+
 
         });
     });

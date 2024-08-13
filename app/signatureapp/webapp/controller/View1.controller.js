@@ -106,7 +106,7 @@ sap.ui.define([
                     mediaType: item.getMediaType(),
                     fileName: item.getFileName(),
                     size: item.getFileObject().size,
-                    signFileMetadata: item
+                   
                 };
 
                 var settings = {
@@ -160,6 +160,7 @@ sap.ui.define([
 
                         // Call function to update the signFileMetadata field
                         this.updateFileMetadata(oObject);
+
                     }.bind(this)).catch(function (err) {
                         console.error("Error executing OData action:", err);
                     });
@@ -183,7 +184,7 @@ sap.ui.define([
 
             updateFileMetadata: function (oObject) {
                 // Replace with the actual file ID you want to update
-                const fileId = "42549797-6b6e-4f9b-ad06-0a783c37fb83";
+                const fileId = "540823f3-e2b1-4c3a-8452-b3bf20d88717";
                 const url = `${this._baseUrl}/odata/v4/catalog/Files(${fileId})`;
 
                 // Data to update
@@ -269,8 +270,8 @@ sap.ui.define([
                         qrCodeImage.setSrc(qrCodeURL);
             
                         // Set the width and height of the QR code image
-                        qrCodeImage.setWidth("200px");  // Ensure this is a valid CSS size value
-                        qrCodeImage.setHeight("200px"); // Ensure this is a valid CSS size value
+                        qrCodeImage.setWidth("200px");  
+                        qrCodeImage.setHeight("200px"); 
             
                         oDialog.open();
                     });

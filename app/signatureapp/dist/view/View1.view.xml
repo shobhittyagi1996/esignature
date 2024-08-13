@@ -39,6 +39,7 @@
                             openPressed="onOpenPressed"
                             removePressed="onRemovePressed"
                         >
+                       
                             <upload:attributes>
                                 <ObjectAttribute
                                     title="Uploaded By"
@@ -72,12 +73,12 @@
                             type="Success"
                             press="onDownloadSelectedFiles"
                         />
-                        <!-- <Button
-                            text="PDF Validation for Ezsigner"
+                        <Button
+                            text="Download Signed Document"
                             id="downloadButton1"
                             type="Success"
                             press="onSendCMS"
-                        /> -->
+                        />
                         <Button
                             text="PDF Validation Merged with Sign and QR Code"
                             id="downloadButton2"
@@ -88,7 +89,7 @@
                             text="Verify"
                             id="id234"
                             type="Success"
-                            press="getSignData"
+                            press="onVerifyButtonPress"
                         />
                     </Toolbar>
                 </footer>

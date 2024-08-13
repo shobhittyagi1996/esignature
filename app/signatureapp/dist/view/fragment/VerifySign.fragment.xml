@@ -1,0 +1,20 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+>
+     <Dialog
+        id="idVerifySignDialog"
+        title="Verify Signature"
+        class="sapUiResponsiveContentPadding"
+       contentWidth="450px"
+       >
+        <VBox>
+            <TextArea id="idVerifySignTextArea" rows="8" width="100%" editable="false"/>
+            <!-- QR Code Image -->
+            <Image id="idQRCodeImage" width="150px" height="150px" />
+        </VBox>
+        <beginButton>
+            <Button text="Cancel" press="onCancel"/>
+        </beginButton>
+    </Dialog>
+</core:FragmentDefinition>
