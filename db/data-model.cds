@@ -15,4 +15,5 @@ entity Files: cuid, managed{
     fileName: String;
     size: Integer;
     url: String;
+    signFileMetadata: LargeString;
 }

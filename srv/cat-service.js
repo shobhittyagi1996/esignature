@@ -75,6 +75,19 @@ module.exports = cds.service.impl(async function () {
         return base64String;
     });
 
+
+        this.on('getSignData', async (req) => {
+            const { sign } = req.data;
+            let content = extractSignerInfo(sign);
+            let signData = JSON.stringify(content)
+            return signData;
+
+        });
+    
+
+
+
+
     this.before('CREATE', 'Files', req => {
         console.log('Create called');
         console.log(JSON.stringify(req.data));

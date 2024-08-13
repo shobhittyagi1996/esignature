@@ -72,17 +72,23 @@
                             type="Success"
                             press="onDownloadSelectedFiles"
                         />
-                        <Button
+                        <!-- <Button
                             text="PDF Validation for Ezsigner"
                             id="downloadButton1"
                             type="Success"
                             press="onSendCMS"
-                        />
+                        /> -->
                         <Button
                             text="PDF Validation Merged with Sign and QR Code"
                             id="downloadButton2"
                             type="Success"
                             press="onSendCMS2"
+                        />
+                         <Button
+                            text="Verify"
+                            id="id234"
+                            type="Success"
+                            press="onVerifyButtonPress"
                         />
                     </Toolbar>
                 </footer>

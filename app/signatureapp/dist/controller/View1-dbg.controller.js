@@ -104,7 +104,8 @@ sap.ui.define([
                 var data = {
                     mediaType: item.getMediaType(),
                     fileName: item.getFileName(),
-                    size: item.getFileObject().size
+                    size: item.getFileObject().size,
+                    signFileMetadata:item
                 };
 
                 var settings = {
@@ -126,6 +127,59 @@ sap.ui.define([
                         });
                 });
             },
+            getSignData: function() {
+                debugger
+                let cmsData = this.cmsString;
+                if (cmsData == null) {
+                    MessageToast.show("Please select the file and sign it first before Validation");
+                    return;
+                }
+                cmsData = cmsData.replace(/-----BEGIN CMS-----|-----END CMS-----|\s/g, '');
+            
+                try {
+                    // Convert CMS data to binary
+                    const binaryString = atob(cmsData);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+            
+                    // Convert binary data to base64
+                    const base64String = this.arrayBufferToBase64(bytes);
+            
+                    // Get the OData model
+                    const oModel = this.getOwnerComponent().getModel();
+                    const oActionDataContext = oModel.bindContext("/getSignData(...)");
+                    oActionDataContext.setParameter("sign", base64String);
+            
+                    oActionDataContext.execute().then(function(oResponse) {
+                        debugger;
+                        var oActionContext = oActionDataContext.getBoundContext();
+                        var oObject = oActionContext.getObject().value;
+            
+                        
+                        // Additional logic to handle the PDF data can be placed here
+            
+                    }).catch(function(err) {
+                        console.error("Error executing OData action:", err);
+                    });
+                    
+                } catch (err) {
+                    console.error("Error processing CMS data:", err);
+                }
+            },
+            
+            // Placeholder for arrayBufferToBase64 function
+            arrayBufferToBase64: function(buffer) {
+                var binary = '';
+                var bytes = new Uint8Array(buffer);
+                var len = bytes.byteLength;
+                for (var i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return window.btoa(binary);
+            },
+            
 
             _uploadContent: function (item, id) {
                 var url = this._baseUrl +`/odata/v4/catalog/Files(${id})/content`;
